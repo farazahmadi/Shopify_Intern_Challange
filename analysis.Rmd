@@ -1,0 +1,97 @@
+---
+title: "Shopify challange"
+author: "Faraz Ahmadi"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    df_print: paged
+subtitle: Fall 2021 Data Science Intern Challenge
+---
+
+__Question 1__: Given some sample data, write a program to answer the following:
+
+On Shopify, we have exactly 100 sneaker shops, and each of these shops sells only one model of shoe. We want to do some analysis of the average order value (AOV). When
+we look at orders data over a 30 day window, we naively calculate an AOV of $3145.13.
+Given that we know these shops are selling sneakers, a relatively affordable item,
+something seems wrong with our analysis.
+
+* a. Think about what could be going wrong with our calculation. Think about a better
+way to evaluate this data.
+* b. What metric would you report for this dataset?
+* c. What is its value?
+
+
+To find the answer to, I import the data to have a closer look. 
+
+```{r}
+library(tidyverse)
+setwd("E:/Job")
+df <- read.csv("2019 Winter Data Science Intern Challenge Data Set - Sheet1.csv")
+dim(df)
+```
+
+Getting a summary of the data.
+```{r}
+summary(df)
+# sum(df$order_amount, na.rm = TRUE)
+# sum(df$total_items)
+aov <- sum(df$order_amount, na.rm = TRUE) / sum(df$total_items)
+aov
+```
+
+We can see that the column `order_amount` has a missing value. It is printed below:
+
+```{r}
+df[which(is.na(df$order_amount)),]
+```
+
+Checking the same user's transactions (user 42), Something seems not right! The same user made the same purchase to the shop 16 other times at the same time in several days. If we are to accept these transaction, the missing value should be imputed or we can always remove that one observation.
+
+```{r}
+df[df$user_id == 607,]
+```
+
+Also, by checking the shop's other transactions. It can be seen that this shop's sneaker has a value of __352__. Because all available `order_amounts` divided by their `total_items` value, result in the same number.
+
+```{r}
+df[df$shop_id == 42,]
+```
+
+The orders with 2000 quantity is repeated 17 times, one of them which is missing in amount but can be filled in because of being same as all other orders. Therefore, we change the `NA` value to 352*2000.
+
+```{r}
+df[is.na(df$order_amount),"order_amount"] <- 352*2000
+```
+
+
+To have more understanding of the data, I create a new column indicating the price of each store's offered show, as we know that each store is only selling one type of sneakers. To find that price, I just have to divide `order_amount` by `total_items`.
+
+```{r}
+df <- df %>% mutate(shoePrice = order_amount / total_items)
+head(df,10)
+```
+
+Now everything is in order to find a decent average order price
+
+```{r}
+aov1 <- mean(df$shoePrice)
+aov2 <- sum(df$order_amount) / sum(df$total_items)
+sum(df$order_amount) / 5000
+
+aov1
+aov2
+```
+
+The average shoe price offered by our stores is __`r round(aov1, digits=2)`__.
+
+I was not sure how the inital number of $3145.13 was calculated, my assumption is that it was the sum or all orders divided by 5000 and not the number of sneakers sold. It was a valid assumption.
+
+But as it seems the question is asking for another metric to calculate this, and to make more sense out of it as we are selling sneakers only. For that I calcuated the average order value over the total number of shoes sold (not the number of orders made!). This resulted in an AOV of __`r round(aov2, digits=2)`__.
+
+
+```{r, echo=FALSE}
+# df %>% group_by(shop_id) %>% 
+#   summarise(obs_num = n(),
+#             shoePrice_avg = sum(shoePrice) / obs_num)
+```
+
